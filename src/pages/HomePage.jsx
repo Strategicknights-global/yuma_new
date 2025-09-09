@@ -5,12 +5,24 @@ import { db } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import OfferBanner from '../components/OfferBanner';
 import {
     Star, ShoppingCart, Search, User, ChevronLeft, ChevronRight, MapPin,
     Mail, Phone, Instagram, Facebook, Youtube, Linkedin, Twitter, Heart, LogOut
 } from 'lucide-react';
+
+import img1 from '../assets/image1.webp';
+import img2 from '../assets/image2.jpg';
+import img3 from '../assets/image3.jpg';
+import img4 from '../assets/image4.jpg';
+import video1 from '../assets/video1.mp4';
+
+// ✅ Swiper imports
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
 
 const HomePage = () => {
     const navigate = useNavigate();
@@ -151,18 +163,42 @@ const HomePage = () => {
             {showNotification && <div className="fixed top-20 right-4 z-[100] bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">{notificationMessage}</div>}
 
             <Navbar />
+<section className="relative w-full h-[350px] md:h-[500px] bg-black overflow-hidden">
+        <Swiper
+          modules={[Autoplay, Pagination, Navigation]}
+          autoplay={{ delay: 4000, disableOnInteraction: false }}
+          loop={true}
+          pagination={{ clickable: true }}
+          navigation={true}
+          className="w-full h-full"
+        >
+          {/* Video Slide */}
+          <SwiperSlide>
+            <video
+              src={video1}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          </SwiperSlide>
 
-            {/* Ganesha Hero Banner */}
-            <section className="relative w-full h-[350px] md:h-[450px] bg-[#fff6e6] overflow-hidden">
-                <img src="/images/ganesh-banner.png" alt="Happy Chaturthi Ganesh" className="absolute top-0 left-0 w-full h-full object-cover" />
-                <div className="relative z-10 container mx-auto px-4 h-full flex items-center justify-center text-center">
-                    <div className="max-w-xl">
-                        <h1 className="text-4xl md:text-5xl font-bold text-[#b85a00]">Happy Chaturthi Ganesh</h1>
-                        <p className="mt-4 text-lg text-[#855e3e]">Lorem ipsum dolor sit amet, elit, sed amet consectetuen, Euismod tincidunt ut larget, dolor set dolor set amet</p>
-                        <p className="mt-4 text-sm font-bold text-[#b85a00]">WWW.GANESHCHARTURTHIURL.COM</p>
-                    </div>
-                </div>
-            </section>
+          {/* Image Slides */}
+          <SwiperSlide>
+            <img src={img1} alt="Banner 1" className="w-full h-full object-cover" />
+          </SwiperSlide>
+          <SwiperSlide>
+            <img src={img2} alt="Banner 2" className="w-full h-full object-cover" />
+          </SwiperSlide>
+          <SwiperSlide>
+            <img src={img3} alt="Banner 3" className="w-full h-full object-cover" />
+          </SwiperSlide>
+          <SwiperSlide>
+            <img src={img4} alt="Banner 4" className="w-full h-full object-cover" />
+          </SwiperSlide>
+        </Swiper>
+      </section>
 
             {/* Offer Banner */}
             <section className="py-8 bg-white">

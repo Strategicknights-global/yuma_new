@@ -4,12 +4,13 @@ import { ShoppingCart, Search, User, LogOut, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
-// Navigation links array for reusability
+// ✅ Updated navLinks array
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/products', label: 'Products' },
   { to: '/about', label: 'About us' },
   { to: '/contact', label: 'Contact' },
+  { to: '/bulk-enquiry', label: 'Bulk Enquiry' }, // ✅ Added Bulk Enquiry
 ];
 
 const Navbar = () => {

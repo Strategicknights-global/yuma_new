@@ -16,12 +16,14 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import Wishlist from './pages/Wishlist.jsx';
+import BulkEnquiry from './pages/BulkEnquiry.jsx'; // ✅ Import Bulk Enquiry Page
 
 // Import common components
 import OfferBanner from './components/OfferBanner';
 import Footer from './components/Footer'; // Ensure Footer is imported
 import { db } from '../firebase.js'; // Import db from firebase
 import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import { FaWhatsapp } from 'react-icons/fa'; // ✅ WhatsApp Icon
 
 function App() {
   const [siteConfig, setSiteConfig] = useState(null);
@@ -50,7 +52,7 @@ function App() {
     // You can render a loading spinner or a blank page while config loads
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -74,11 +76,23 @@ function App() {
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/order-success/:orderId" element={<OrderSuccessPage />} />
                 <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-                <Route path="/wishlist" element ={<Wishlist />}/>
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/bulk-enquiry" element={<BulkEnquiry />} /> 
               </Routes>
             </main>
-            {/* Pass the fetched siteConfig to the Footer */}
+
+            {/* Footer */}
             <Footer siteConfig={siteConfig?.footerInfo || {}} />
+
+            {/* ✅ Floating WhatsApp Button (edit number as needed) */}
+            <a
+              href="https://wa.me/9876543210"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="fixed bottom-5 right-5 bg-green-500 p-4 rounded-full shadow-lg hover:bg-green-600 transition animate-bounce"
+            >
+              <FaWhatsapp size={28} color="white" />
+            </a>
           </div>
         </Router>
       </CartProvider>
