@@ -33,7 +33,7 @@ const AboutPage = () => {
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
        
-
+      <Navbar />
       {/* Conditional rendering for the main content area */}
       {loading ? (
         // Display spinner while loading

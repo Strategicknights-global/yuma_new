@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, onSnapshot, limit, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,7 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { user, isLoggedIn } = useAuth(); // ✅ make sure AuthContext provides `user`
+  const { user, isLoggedIn } = useAuth();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,9 +20,8 @@ const ProductDetailPage = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [notification, setNotification] = useState('');
-  const [currentStock, setCurrentStock] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [wishlist, setWishlist] = useState([]); // ✅ local wishlist state
+  const [wishlist, setWishlist] = useState([]);
 
   // Fetch product
   useEffect(() => {
@@ -50,7 +49,7 @@ const ProductDetailPage = () => {
     if (id) fetchProduct();
   }, [id]);
 
-  // Fetch wishlist from Firestore when user logs in
+  // Fetch wishlist when user logs in
   useEffect(() => {
     if (!user) {
       setWishlist([]);
@@ -70,44 +69,6 @@ const ProductDetailPage = () => {
     return () => unsubscribe();
   }, [user]);
 
-  // Listen to inventory if inStock is true
-  useEffect(() => {
-    if (!product || !product.inStock) return;
-
-    let inventoryProductName;
-    if (selectedVariant) {
-      inventoryProductName = `${product.name} (${selectedVariant.size})`;
-    } else {
-      inventoryProductName = product.name;
-    }
-
-    setCurrentStock(null);
-
-    const q = query(
-      collection(db, 'inventory_items'),
-      where('productName', '==', inventoryProductName),
-      limit(1)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const inventoryData = snapshot.docs[0].data();
-          setCurrentStock(inventoryData.currentStock);
-        } else {
-          setCurrentStock(0);
-        }
-      },
-      (err) => {
-        console.error('Error fetching inventory:', err);
-        setCurrentStock(0);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [product, selectedVariant]);
-
   const showNotification = (message) => {
     setNotification(message);
     setTimeout(() => setNotification(''), 3000);
@@ -119,10 +80,11 @@ const ProductDetailPage = () => {
       return;
     }
 
-    if (!product?.inStock || currentStock === null || currentStock < quantity) {
-      showNotification('Not enough stock available.');
+    if (!product?.inStock) {
+      showNotification('This product is out of stock.');
       return;
     }
+
     addToCart(product, quantity, selectedVariant);
     const displayName = selectedVariant ? `${product.name} (${selectedVariant.size})` : product.name;
     showNotification(`${quantity} x ${displayName} added to cart!`);
@@ -154,9 +116,7 @@ const ProductDetailPage = () => {
   };
 
   const incrementQuantity = () => {
-    if (currentStock !== null && quantity < currentStock) {
-      setQuantity((q) => q + 1);
-    }
+    setQuantity((q) => q + 1);
   };
 
   const decrementQuantity = () => {
@@ -182,17 +142,8 @@ const ProductDetailPage = () => {
   const displayPrice = selectedVariant?.discountPrice ?? selectedVariant?.price ?? product.price;
   const originalPrice = selectedVariant?.price ?? product.originalPrice;
 
-  // Stock status logic
-  let stockStatus = "checking";
-  if (!product.inStock) {
-    stockStatus = "out";
-  } else if (currentStock === null) {
-    stockStatus = "checking";
-  } else if (currentStock <= 0) {
-    stockStatus = "out";
-  } else {
-    stockStatus = "in";
-  }
+  // Stock status simplified
+  const stockStatus = product.inStock ? "in" : "out";
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -271,16 +222,12 @@ const ProductDetailPage = () => {
             )}
 
             <div className="mb-6 flex items-center gap-2">
-              {stockStatus === "checking" && (
-                <span className="font-semibold text-gray-500">Checking stock...</span>
-              )}
-              {stockStatus === "out" && (
+              {stockStatus === "out" ? (
                 <>
                   <XCircle className="w-5 h-5 text-red-600" />
                   <span className="font-semibold text-red-600">Out of Stock</span>
                 </>
-              )}
-              {stockStatus === "in" && (
+              ) : (
                 <>
                   <CheckCircle className="w-5 h-5 text-green-600" />
                   <span className="font-semibold text-green-600">In Stock</span>

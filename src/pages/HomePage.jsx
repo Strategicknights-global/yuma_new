@@ -5,10 +5,10 @@ import { db } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
-import OfferBanner from '../components/OfferBanner';
+import logo from '../assets/logo.png';
+
 import {
-    Star, ShoppingCart, Search, User, ChevronLeft, ChevronRight, MapPin,
-    Mail, Phone, Instagram, Facebook, Youtube, Linkedin, Twitter, Heart, LogOut
+    Star, ShoppingCart, MapPin, Mail, Instagram, Facebook, Youtube, Linkedin, Twitter
 } from 'lucide-react';
 
 import img1 from '../assets/image1.webp';
@@ -17,25 +17,30 @@ import img3 from '../assets/image3.jpg';
 import img4 from '../assets/image4.jpg';
 import video1 from '../assets/video1.mp4';
 
+import bg1 from '../assets/bg1.webp';
+import bg2 from '../assets/bg2.jpg';
+import bg3 from '../assets/bg3.jpg';
+import bg4 from '../assets/bg4.jpg';
+import bg5 from '../assets/bg5.jpg';
+
 // ✅ Swiper imports
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+import { Autoplay, Pagination, Navigation, EffectCreative} from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
+import 'swiper/css/effect-coverflow'; 
 
 const HomePage = () => {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
-    const { addToCart, totalCartItems, wishlist, toggleWishlist } = useCart();
+    const { addToCart } = useCart();
 
     // UI State
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
     const [currentTestimonial, setCurrentTestimonial] = useState(0);
     const [activeCategory, setActiveCategory] = useState('All');
-    const [searchQuery, setSearchQuery] = useState('');
     const [newsletterEmail, setNewsletterEmail] = useState('');
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
@@ -49,6 +54,15 @@ const HomePage = () => {
         heroSlides: [], testimonials: [], features: [], footerInfo: { socials: {} }
     });
 
+    // ✅ Helper: Get correct product price
+    const getProductPrice = (product) => {
+        if (product.variants && product.variants.length > 0) {
+            const firstVariant = product.variants[0];
+            return firstVariant.discountPrice || firstVariant.price || 0;
+        }
+        return product.price || 0;
+    };
+
     // Data Fetching from Firebase
     useEffect(() => {
         const fetchData = async () => {
@@ -58,15 +72,19 @@ const HomePage = () => {
                 const configDoc = await getDoc(doc(db, 'siteConfiguration', 'mainConfig'));
                 if (configDoc.exists()) setSiteConfig(configDoc.data());
 
+                // ✅ Fetch categories
                 const categoriesSnapshot = await getDocs(collection(db, 'categories'));
                 setCategories(categoriesSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
 
+                // ✅ Fetch products
                 const productsSnapshot = await getDocs(collection(db, 'products'));
                 const allProducts = productsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 setProducts(allProducts);
 
                 setPopularProducts(allProducts.filter(p => p.isPopular === true).sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0)));
-                setComboProducts(allProducts.filter(p => p.isCombo === true).slice(0, 3));
+
+                // ✅ Only COMBO products, limit 3
+                setComboProducts(allProducts.filter(p => p.productType === "COMBO").slice(0, 3));
 
             } catch (err) {
                 console.error("Error fetching homepage data:", err);
@@ -102,11 +120,6 @@ const HomePage = () => {
         navigate('/cart');
     };
 
-    const handleSearch = (e) => {
-        e.preventDefault();
-        if (searchQuery.trim()) navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-    };
-
     const handleSubscribe = async () => {
         if (!newsletterEmail || !/^\S+@\S+\.\S+$/.test(newsletterEmail)) {
             return triggerNotification("Please enter a valid email.");
@@ -123,84 +136,61 @@ const HomePage = () => {
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div></div>;
     if (error) return <div className="min-h-screen flex items-center justify-center bg-red-100 text-red-700 font-semibold p-8 text-center">{error}</div>;
 
+    // ✅ Filter products by category
+    const filteredProducts = products.filter(p => {
+        if (activeCategory === 'All') return true;
+        return p.categoryId === activeCategory;
+    });
+
     const testimonials = [
-        {
-            quote: "The malt drink is so refreshing and rich in flavor! I also tried the spicy snack mix — absolutely addictive. The ordering was a breeze and delivery was quick.",
-            name: "Priya M.",
-            title: "Coimbatore"
-        },
-        {
-            quote: "I ordered the combo pack of snacks and malt — everything tasted fresh and homemade. It really feels like a premium experience at an affordable price.",
-            name: "Raju M.",
-            title: "Coimbatore"
-        },
-        {
-            quote: "Crispy, flavorful, and so fresh! The banana chips tasted exactly like my childhood. I'm definitely ordering again and recommending to friends!",
-            name: "Nivi M.",
-            title: "Coimbatore"
-        }
+        { quote: "The malt drink is so refreshing and rich in flavor!", name: "Priya M.", title: "Coimbatore" },
+        { quote: "I ordered the combo pack of snacks and malt — fresh & tasty!", name: "Raju M.", title: "Coimbatore" },
+        { quote: "Crispy and fresh! Tasted like my childhood.", name: "Nivi M.", title: "Coimbatore" }
     ];
 
-    // ✅ YouTube Shorts setup
-    const youtubeShorts = [
-        { id: 1, videoId: "mTxHZAG_THs" },
-        { id: 2, videoId: "mTxHZAG_THs" },
-        { id: 3, videoId: "mTxHZAG_THs" },
-        { id: 4, videoId: "mTxHZAG_THs" },
-        { id: 5, videoId: "mTxHZAG_THs" },
-    ];
+   const youtubeShorts = [
+  { id: 1, videoId: "Lz-5ViiCZmo" },
+  { id: 2, videoId: "2iHlsmkp6I4" },
+  { id: 3, videoId: "qT0Olwyv108" },
+  { id: 4, videoId: "JLbVad08jkQ" },
+  { id: 5, videoId: "CiUEODyBsQk" },
+];
+// ✅ Reels Array
+const instagramReels = [
+  { id: 1, url: "https://www.instagram.com/p/DMNetXrzVmO/embed" },
+  { id: 2, url: "https://www.instagram.com/p/C7txaVJz9Zl/embed" },
+  { id: 3, url: "https://www.instagram.com/p/C6mnA4kKxL_/embed" },
+];
 
-    const features = [
-        { icon: 'https://via.placeholder.com/80/FFC107/FFFFFF?text=Farmer', title: 'From Trusted Farmers', description: 'We source the best ingredients from farmers we trust.' },
-        { icon: 'https://via.placeholder.com/80/FFC107/FFFFFF?text=Packed', title: 'Freshly Packed', description: 'Our products are packed with care to ensure maximum freshness.' },
-        { icon: 'https://via.placeholder.com/80/FFC107/FFFFFF?text=Ingredients', title: 'Hand Picked Ingredients', description: 'Each ingredient is carefully chosen by hand for quality.' },
-        { icon: 'https://via.placeholder.com/80/FFC107/FFFFFF?text=Organic', title: '100% Organic', description: 'We use only organic ingredients for healthy, tasty food.' },
-        { icon: 'https://via.placeholder.com/80/FFC107/FFFFFF?text=Delivery', title: 'Door Step Delivery', description: 'Enjoy our fresh products delivered right to your door.' },
-    ];
+
+    // ✅ Features Array
+const features = [
+  { icon: bg1, title: 'From Trusted Farmers', description: 'We source the best ingredients from farmers we trust.' },
+  { icon: bg2, title: 'Freshly Packed', description: 'Our products are packed with care to ensure maximum freshness.' },
+  { icon: bg3, title: 'Hand Picked Ingredients', description: 'Each ingredient is carefully chosen by hand for quality.' },
+  { icon: bg4, title: '100% Organic', description: 'We use only organic ingredients for healthy, tasty food.' },
+  { icon: bg5, title: 'Door Step Delivery', description: 'Enjoy our fresh products delivered right to your door.' },
+];
+
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
             {showNotification && <div className="fixed top-20 right-4 z-[100] bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">{notificationMessage}</div>}
 
             <Navbar />
-<section className="relative w-full h-[350px] md:h-[500px] bg-black overflow-hidden">
-        <Swiper
-          modules={[Autoplay, Pagination, Navigation]}
-          autoplay={{ delay: 4000, disableOnInteraction: false }}
-          loop={true}
-          pagination={{ clickable: true }}
-          navigation={true}
-          className="w-full h-full"
-        >
-          {/* Video Slide */}
-          <SwiperSlide>
-            <video
-              src={video1}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-          </SwiperSlide>
 
-          {/* Image Slides */}
-          <SwiperSlide>
-            <img src={img1} alt="Banner 1" className="w-full h-full object-cover" />
-          </SwiperSlide>
-          <SwiperSlide>
-            <img src={img2} alt="Banner 2" className="w-full h-full object-cover" />
-          </SwiperSlide>
-          <SwiperSlide>
-            <img src={img3} alt="Banner 3" className="w-full h-full object-cover" />
-          </SwiperSlide>
-          <SwiperSlide>
-            <img src={img4} alt="Banner 4" className="w-full h-full object-cover" />
-          </SwiperSlide>
-        </Swiper>
-      </section>
+            {/* ✅ Hero Banner */}
+            <section className="relative w-full h-[350px] md:h-[500px] bg-black overflow-hidden">
+                <Swiper modules={[Autoplay, Pagination, Navigation]} autoplay={{ delay: 4000 }} loop pagination={{ clickable: true }} navigation className="w-full h-full">
+                    <SwiperSlide><video src={video1} autoPlay loop muted playsInline className="w-full h-full object-cover" /></SwiperSlide>
+                    <SwiperSlide><img src={img1} alt="Banner 1" className="w-full h-full object-cover" /></SwiperSlide>
+                    <SwiperSlide><img src={img2} alt="Banner 2" className="w-full h-full object-cover" /></SwiperSlide>
+                    <SwiperSlide><img src={img3} alt="Banner 3" className="w-full h-full object-cover" /></SwiperSlide>
+                    <SwiperSlide><img src={img4} alt="Banner 4" className="w-full h-full object-cover" /></SwiperSlide>
+                </Swiper>
+            </section>
 
-            {/* Offer Banner */}
+            {/* ✅ Offer Banner */}
             <section className="py-8 bg-white">
                 <div className="container mx-auto px-4 text-center">
                     <div className="bg-[#fcf5d9] p-4 rounded-xl shadow-md">
@@ -212,38 +202,35 @@ const HomePage = () => {
                 </div>
             </section>
 
-            {/* Popular Products Section */}
+            {/* ✅ Popular Products Section with Categories */}
             <section className="py-12 bg-white">
                 <div className="container mx-auto px-4">
                     <h2 className="text-3xl font-bold text-center mb-8 text-[#b85a00]">Popular Products</h2>
-                    <div className="flex justify-center mb-8 space-x-4">
-                        {['Milk Mix', 'Porridge Mix', 'Malt', 'Snacks', 'Flour'].map(cat => (
-                            <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeCategory === cat ? 'bg-[#b85a00] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{cat}</button>
+
+                    {/* ✅ Category buttons */}
+                    <div className="flex justify-center mb-8 space-x-4 flex-wrap">
+                        <button onClick={() => setActiveCategory('All')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeCategory === 'All' ? 'bg-[#b85a00] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All</button>
+                        {categories.map(cat => (
+                            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeCategory === cat.id ? 'bg-[#b85a00] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{cat.name}</button>
                         ))}
                     </div>
+
+                    {/* ✅ Filtered Products */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {popularProducts.slice(0, 8).map(p => (
+                        {filteredProducts.slice(0, 8).map(p => (
                             <div key={p.id} className="bg-white rounded-xl shadow-md overflow-hidden transition-transform transform hover:scale-105">
                                 <Link to={`/products/${p.id}`}>
-                                    <img src={p.images[0]} alt={p.name} className="w-full h-48 object-cover" />
+                                    <img src={p.images?.[0]} alt={p.name} className="w-full h-48 object-cover" />
                                     <div className="p-4 text-center">
                                         <h3 className="text-md font-semibold text-gray-800 mb-2">{p.name}</h3>
-                                        <div className="flex items-center justify-center text-sm text-gray-600 mb-2">
-                                            <span className="flex items-center">
-                                                {Array.from({ length: 5 }, (_, i) => (
-                                                    <Star key={i} className={`w-4 h-4 ${i < p.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
-                                                ))}
-                                            </span>
-                                            <span className="ml-2">({p.reviews} Reviews)</span>
-                                        </div>
-                                        <div className="text-xl font-bold text-[#b85a00] mb-4">₹{p.price}</div>
+                                        <div className="text-xl font-bold text-[#b85a00] mb-4">₹{getProductPrice(p)}</div>
                                     </div>
                                 </Link>
                                 <div className="flex justify-center space-x-2 p-4">
-                                    <button onClick={() => handleAddToCart(p)} className="flex items-center bg-[#f0c242] text-gray-800 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#e0b034] transition-colors">
+                                    <button onClick={() => handleAddToCart(p)} className="flex items-center bg-[#f0c242] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#e0b034]">
                                         <ShoppingCart className="w-4 h-4 mr-1" /> Add to Cart
                                     </button>
-                                    <button onClick={() => handleBuyNow(p)} className="bg-[#b85a00] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#a14f00] transition-colors">Buy Now</button>
+                                    <button onClick={() => handleBuyNow(p)} className="bg-[#b85a00] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#a14f00]">Buy Now</button>
                                 </div>
                             </div>
                         ))}
@@ -251,7 +238,7 @@ const HomePage = () => {
                 </div>
             </section>
 
-            {/* Mega Combo Section */}
+            {/* ✅ Mega Combo Section */}
             <section className="py-12 bg-white">
                 <div className="container mx-auto px-4">
                     <div className="flex flex-col lg:flex-row items-center bg-[#fff8e6] rounded-xl p-8 shadow-md">
@@ -260,13 +247,15 @@ const HomePage = () => {
                                 <div key={p.id} className="bg-white rounded-lg p-4 shadow-sm flex flex-col items-center text-center">
                                     <img src={p.images[0]} alt={p.name} className="w-full h-40 object-contain" />
                                     <h3 className="font-semibold text-gray-800 mt-2">{p.name}</h3>
-                                    <div className="flex items-center justify-center text-sm text-gray-600 my-1">
-                                        {Array.from({ length: 5 }, (_, i) => (
-                                            <Star key={i} className={`w-3 h-3 ${i < p.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
-                                        ))}
-                                        <span className="ml-1 text-xs">({p.reviews} Reviews)</span>
+                                    <div className="text-lg font-bold text-[#b85a00] mb-4">₹{getProductPrice(p)}</div>
+                                    <div className="flex space-x-2">
+                                        <button onClick={() => handleAddToCart(p)} className="flex items-center bg-[#f0c242] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e0b034]">
+                                            <ShoppingCart className="w-4 h-4 mr-1" /> Add
+                                        </button>
+                                        <button onClick={() => handleBuyNow(p)} className="bg-[#b85a00] text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#a14f00]">
+                                            Buy Now
+                                        </button>
                                     </div>
-                                    <div className="text-lg font-bold text-[#b85a00]">₹{p.price}</div>
                                 </div>
                             ))}
                         </div>
@@ -278,47 +267,119 @@ const HomePage = () => {
                 </div>
             </section>
 
-            {/* Why Choose Us? */}
-            <section className="py-12 bg-gray-50">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl font-bold text-center mb-8 text-[#b85a00]">Why buy from Yuma Fresh Foods ?</h2>
-                    <div className="flex flex-wrap justify-center gap-8">
-                        {features.map((feature, index) => (
-                            <div key={index} className="text-center w-36">
-                                <img src={feature.icon} alt={feature.title} className="w-24 h-24 object-contain mx-auto mb-2" />
-                                <p className="text-sm font-semibold text-gray-700">{feature.title}</p>
-                            </div>
-                        ))}
-                    </div>
+                    {/* ✅ Why Choose Us */}
+        <section className="py-12 bg-gray-50">
+        <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-8 text-[#b85a00]">
+            Why buy from Yuma Fresh Foods?
+            </h2>
+            <div className="flex flex-wrap justify-center gap-8">
+            {features.map((feature, index) => (
+                <div
+                key={index}
+                className="bg-white rounded-xl shadow-lg p-6 w-48 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300"
+                >
+                <img
+                    src={feature.icon}
+                    alt={feature.title}
+                    className="w-20 h-20 object-cover rounded-full mb-4 border-4 border-[#b85a00]/20"
+                />
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                    {feature.title}
+                </h3>
+                <p className="text-sm text-gray-600">{feature.description}</p>
                 </div>
-            </section>
+            ))}
+            </div>
+        </div>
+        </section>
 
-            {/* See It. Crave It. Taste It */}
+            {/* see it , crave it , taste it */}
             <section className="py-12 bg-white">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl font-bold text-center mb-8 text-[#b85a00]">See It. Crave It. Taste It</h2>
-                    <div className="flex overflow-x-auto gap-4 p-4 -mx-4 scrollbar-hide">
-                        {youtubeShorts.map((short) => (
-                            <div
-                                key={short.id}
-                                className="flex-shrink-0 w-64 h-96 md:w-80 md:h-[30rem] rounded-lg overflow-hidden shadow-lg cursor-pointer transition-transform hover:scale-105"
-                                onClick={() => window.open("https://www.instagram.com/strategic_knights?igsh=eGlseWVyM3hzdm1t", "_blank")}
-                            >
-                                <iframe
-                                    className="w-full h-full"
-                                    src={`https://www.youtube.com/embed/${short.videoId}?autoplay=1&mute=1&loop=1&playlist=${short.videoId}`}
-                                    title="YouTube Short"
-                                    frameBorder="0"
-                                    allow="autoplay; encrypted-media"
-                                    allowFullScreen
-                                ></iframe>
+            <div className="container mx-auto px-4">
+                <h2 className="text-3xl font-bold text-center mb-8 text-[#b85a00]">
+                See It. Crave It. Taste It
+                </h2>
+                <Swiper
+                effect={'creative'}
+                grabCursor={true}
+                centeredSlides={true}
+                slidesPerView={1.3}
+                spaceBetween={20}
+                loop={true}
+                autoplay={{ delay: 6000, disableOnInteraction: false }}
+                pagination={{ clickable: true }}
+                modules={[Autoplay, Pagination, EffectCreative]}
+                creativeEffect={{
+                    prev: {
+                    shadow: true,
+                    translate: ['-25%', 0, -200],
+                    rotate: [0, 0, -8],
+                    },
+                    next: {
+                    shadow: true,
+                    translate: ['25%', 0, -200],
+                    rotate: [0, 0, 8],
+                    },
+                }}
+                className="w-full max-w-5xl"
+                >
+                {youtubeShorts.map((short) => (
+                    <SwiperSlide
+                    key={short.id}
+                    className="w-52 h-[45rem] md:w-60 md:h-[50rem]"
+                    >
+                    {/* Card Container */}
+                    <div className="relative w-full h-96 bg-gradient-to-b from-gray-900 via-gray-800 to-black rounded-2xl overflow-hidden shadow-2xl border border-gray-700 group hover:shadow-3xl transition-all duration-300 hover:scale-[1.02]">
+                        
+                        {/* Video Container */}
+                        <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                        <iframe
+            className="w-full h-full object-cover"
+            src={`https://www.youtube.com/embed/${short.videoId}?autoplay=1&mute=1&loop=1&playlist=${short.videoId}`}
+            title="YouTube Short"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            />
+                        
+                        {/* Overlay Gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                        
+                        {/* Play Button Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        <div className="bg-white/20 backdrop-blur-md rounded-full p-4 transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                            <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                        </div>
+                        
+                        {/* Corner Accent */}
+                        <div className="absolute top-0 right-0 w-16 h-16">
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-[#b85a00] rounded-full opacity-70 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                        
+                        {/* Bottom Info Bar (Optional) */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        <div className="flex items-center justify-between text-white">
+                            <span className="text-sm font-medium">Watch Now</span>
+                            <div className="flex space-x-1">
+                            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                            <div className="w-1.5 h-1.5 bg-white/60 rounded-full animate-pulse" style={{animationDelay: '0.2s'}} />
+                            <div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-pulse" style={{animationDelay: '0.4s'}} />
                             </div>
-                        ))}
+                        </div>
+                        </div>
+                        
                     </div>
-                </div>
+                    </SwiperSlide>
+                ))}
+                </Swiper>
+            </div>
             </section>
-
-            {/* Testimonials */}
+            {/* ✅ Testimonials */}
             <section className="py-12 bg-white">
                 <div className="container mx-auto px-4 text-center">
                     <div className="bg-[#a14f00] text-white py-12 px-8 rounded-xl shadow-lg">
@@ -339,42 +400,44 @@ const HomePage = () => {
                 </div>
             </section>
 
-            {/* Follow on Social Media Section */}
-            <section className="py-12 bg-white">
-                <div className="container mx-auto px-4 text-center">
-                    <h2 className="text-3xl font-bold mb-8 text-[#b85a00]">Follow us on Social Media</h2>
-                    <div className="flex overflow-x-auto gap-4 p-4 -mx-4 scrollbar-hide">
-                        {youtubeShorts.map((short) => (
-                            <div
-                                key={short.id}
-                                className="flex-shrink-0 w-64 h-96 md:w-80 md:h-[30rem] rounded-lg overflow-hidden shadow-lg cursor-pointer transition-transform hover:scale-105"
-                                onClick={() => window.open("https://www.instagram.com/strategic_knights?igsh=eGlseWVyM3hzdm1t", "_blank")}
-                            >
-                                <iframe
-                                    className="w-full h-full"
-                                    src={`https://www.youtube.com/embed/${short.videoId}?autoplay=1&mute=1&loop=1&playlist=${short.videoId}`}
-                                    title="YouTube Short"
-                                    frameBorder="0"
-                                    allow="autoplay; encrypted-media"
-                                    allowFullScreen
-                                ></iframe>
-                            </div>
-                        ))}
-                    </div>
-                    <button
-                        onClick={() => window.open("https://www.instagram.com/strategic_knights?igsh=eGlseWVyM3hzdm1t", "_blank")}
-                        className="mt-8 bg-[#b85a00] text-white px-8 py-4 rounded-lg font-semibold hover:bg-[#a14f00] transition-colors"
-                    >
-                        Follow us on Instagram
-                    </button>
-                </div>
-            </section>
+            {/* ✅ Follow on Social Media (Instagram Reels Embed) */}
+<section className="py-12 bg-white">
+  <div className="container mx-auto px-4 text-center">
+    <h2 className="text-3xl font-bold mb-8 text-[#b85a00]">Follow us on Social Media</h2>
 
-            {/* Footer */}
+    <div className="flex overflow-x-auto gap-6 p-4 -mx-4 scrollbar-hide justify-center">
+      {instagramReels.map((reel) => (
+        <div key={reel.id} className="flex-shrink-0 w-[350px] h-[600px] rounded-lg overflow-hidden shadow-lg">
+          <iframe
+            src={reel.url}
+            width="100%"
+            height="600"
+            frameBorder="0"
+            scrolling="no"
+            allowtransparency="true"
+            allow="encrypted-media"
+            title={`Instagram Reel ${reel.id}`}
+          ></iframe>
+        </div>
+      ))}
+    </div>
+
+    <button
+      onClick={() =>
+        window.open("https://www.instagram.com/strategic_knights?igsh=dzR6dGRlcjc3N3Q%3D", "_blank")
+      }
+      className="mt-8 bg-[#b85a00] text-white px-8 py-4 rounded-lg font-semibold hover:bg-[#a14f00] transition-colors"
+    >
+      Follow us on Instagram
+    </button>
+  </div>
+</section>
+
+            {/* ✅ Footer */}
             <footer className="bg-[#b85a00] text-white py-12">
                 <div className="container mx-auto px-4 flex flex-col md:flex-row items-center md:items-start justify-between">
                     <div className="mb-8 md:mb-0 text-center md:text-left">
-                        <img src="/images/yuma-logo.png" alt="Yuma's Fresh Foods Logo" className="w-32 mb-4 mx-auto md:mx-0" />
+                        <img src={logo} alt="Yuma's Fresh Foods Logo" className="w-32 mb-4 mx-auto md:mx-0" />
                         <div className="flex items-center justify-center md:justify-start mb-2">
                             <MapPin className="w-4 h-4 mr-2" />
                             <p className="text-sm">123 Street Address, Oil Nagar, Sample City - 123456 Tamil Nadu, India</p>
@@ -428,7 +491,6 @@ const HomePage = () => {
                     </div>
                 </div>
             </footer>
-        
         </div>
     );
 };

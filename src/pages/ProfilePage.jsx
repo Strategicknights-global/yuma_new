@@ -1,23 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
-import { User, Package, ChevronRight } from 'lucide-react';
+import { User, Package, ChevronRight, MapPin, Edit3 } from 'lucide-react';
+import Navbar from '../components/Navbar';
 
 const ProfilePage = () => {
-  const { user, isLoggedIn } = useAuth(); // ✅ updated
+  const { user, isLoggedIn } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Address states
+  const [address, setAddress] = useState('');
+  const [pincode, setPincode] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
-    // If no user is logged in, redirect to the login page
     if (!isLoggedIn || !user?.uid) {
       navigate('/login?redirect=/profile');
       return;
     }
 
+    // Fetch Orders
     const fetchOrders = async () => {
       try {
         const q = query(
@@ -34,11 +41,64 @@ const ProfilePage = () => {
       }
     };
 
+    // Fetch user profile (address/pincode)
+    const fetchUserProfile = async () => {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.address) setAddress(data.address);
+          if (data.pincode) setPincode(data.pincode);
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    };
+
     fetchOrders();
+    fetchUserProfile();
   }, [user, isLoggedIn, navigate]);
 
+  // Auto fetch current location → pincode
+  const fetchLocation = async () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation not supported on this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+        );
+        const data = await res.json();
+        setAddress(data.display_name || '');
+        setPincode(data.address?.postcode || '');
+      } catch (err) {
+        console.error('Error fetching location:', err);
+      }
+    });
+  };
+
+  // Save to Firestore under `users` collection
+  const saveAddress = async () => {
+    if (!user?.uid) return;
+    try {
+      setSaving(true);
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { address, pincode });
+      setEditMode(false);
+      alert('Address updated!');
+    } catch (err) {
+      console.error('Error saving address:', err);
+      alert('Failed to save address');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!isLoggedIn || !user) {
-    // This will be shown briefly before the redirect happens
     return (
       <div className="min-h-screen flex items-center justify-center">
         Redirecting to login...
@@ -48,10 +108,11 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-extrabold text-gray-900 mb-8">My Account</h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Details Card */}
+          {/* Profile Details + Address */}
           <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
             <div className="flex items-center space-x-4 mb-6">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
@@ -64,7 +125,113 @@ const ProfilePage = () => {
                 <p className="text-sm text-gray-600">{user.email}</p>
               </div>
             </div>
-            {/* Future: Add links for Edit Profile, Change Password, etc. */}
+
+            {/* Address Section */}
+            <div className="space-y-4">
+              {!address && !pincode ? (
+                // No address set → show form
+                <>
+                  <label className="block">
+                    <span className="text-sm font-semibold text-gray-700">Address</span>
+                    <textarea
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      rows="2"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Enter your address"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-semibold text-gray-700">Pincode</span>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value)}
+                      placeholder="Enter Pincode"
+                    />
+                  </label>
+
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={fetchLocation}
+                      className="flex items-center px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" /> Use Current Location
+                    </button>
+                    <button
+                      onClick={saveAddress}
+                      disabled={saving}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    >
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </>
+              ) : editMode ? (
+                // Edit mode → show form
+                <>
+                  <label className="block">
+                    <span className="text-sm font-semibold text-gray-700">Address</span>
+                    <textarea
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      rows="2"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-semibold text-gray-700">Pincode</span>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value)}
+                    />
+                  </label>
+
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={fetchLocation}
+                      className="flex items-center px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" /> Use Current Location
+                    </button>
+                    <button
+                      onClick={saveAddress}
+                      disabled={saving}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    >
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditMode(false)}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                // View mode → show saved address
+                <div>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">
+                    <strong>Address:</strong> {address}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <strong>Pincode:</strong> {pincode}
+                  </p>
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className="mt-3 flex items-center px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" /> Edit
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Order History */}
@@ -84,7 +251,8 @@ const ProfilePage = () => {
                         Order #{order.id.slice(0, 8)}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Date: {order.createdAt?.toDate
+                        Date:{' '}
+                        {order.createdAt?.toDate
                           ? order.createdAt.toDate().toLocaleDateString()
                           : 'N/A'}
                       </p>
@@ -104,7 +272,9 @@ const ProfilePage = () => {
             ) : (
               <div className="text-center py-8">
                 <Package className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium text-gray-900">No Orders Yet</h3>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">
+                  No Orders Yet
+                </h3>
                 <p className="mt-1 text-sm text-gray-500">
                   You haven't placed any orders with us yet.
                 </p>

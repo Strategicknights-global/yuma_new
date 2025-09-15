@@ -452,7 +452,6 @@ const ProductPage = () => {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 };
