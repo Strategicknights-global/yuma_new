@@ -146,7 +146,7 @@ const Wishlist = () => {
           </div>
         ) : (
           <div className="text-center py-16 bg-orange-100 rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold text-orange-800">
+            <h2 className="text-2xl font-semibold text-orange-800">
               Your Wishlist is Empty
             </h2>
             <p className="text-orange-600 mt-2">

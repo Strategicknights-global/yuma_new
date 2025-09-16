@@ -31,7 +31,6 @@ const AboutPage = () => {
   // Or simply pass config directly and let Footer handle defaults if it's robust
 
   return (
-    
     <div className="min-h-screen bg-orange-50 flex flex-col">
        
       <Navbar />

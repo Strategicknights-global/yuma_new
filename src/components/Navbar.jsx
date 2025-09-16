@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'; // ✅ added useLocation
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Search, User, LogOut, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -18,11 +18,8 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ check current path
-  const { user, logout } = useAuth(); 
+  const { user, logout } = useAuth(); // ✅ updated: using `user` from AuthContext
   const { totalCartItems } = useCart();
-
-  const isHome = location.pathname === "/"; // ✅ detect if Home page
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -36,7 +33,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      await logout(); 
+      await logout(); // from AuthContext
       setIsMobileMenuOpen(false);
       navigate('/login', { replace: true });
     } catch (error) {
@@ -48,22 +45,12 @@ const Navbar = () => {
   };
 
   return (
-    <nav
-      className={`sticky top-0 z-50 transition-colors duration-300 ${
-        isHome ? "bg-transparent" : "bg-white shadow-sm"
-      }`}
-    >
+    <nav className="bg-white shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-6 py-3 flex justify-between items-center">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <img src="src/assets/logo.png" alt="Yuma Foods Logo" className="helo" />
-          <span
-            className="text-4xl font-bold relative text-red-600"
-            style={{ fontFamily: "'Baloo 2', cursive" }}
-          >
-            Yuma Foods
-            <span className="absolute inset-0 -z-10 blur-2xl rounded-full bg-green-400 opacity-90"></span>
-          </span>
+          <span className="text-2xl font-bold text-red-600">Yuma Foods</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -74,8 +61,8 @@ const Navbar = () => {
               to={link.to}
               className={({ isActive }) =>
                 isActive
-                  ? 'text-green-600 font-bold border-b-2 border-green-600 transition-colors'
-                  : 'text-gray-700 hover:text-green-600 font-medium transition-colors'
+                  ? 'text-red-600 font-bold border-b-2 border-red-600 transition-colors'
+                  : 'text-gray-700 hover:text-red-600 font-medium transition-colors'
               }
             >
               {link.label}
@@ -124,7 +111,7 @@ const Navbar = () => {
           >
             <ShoppingCart className="w-6 h-6 text-gray-700" />
             {totalCartItems > 0 && (
-              <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {totalCartItems}
               </span>
             )}

@@ -1,51 +1,43 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Import Link for internal navigation
 
 const offers = [
-  { text: "⚡ 20% OFF Your First Order! Use Code FIRST20", link: "/products?offer=FIRST20" },
-  { text: "🚚 Free Shipping on Orders Over ₹500! 🎉", link: "/products?offer=FREESHIP" },
-  { text: "⏰ Limited Time Offer! Shop Now! ⭐", link: "/products?offer=LIMITEDTIME" },
+  { text: "⚡ 20% OFF Your First Order! Use Code FIRST20", link: "/products?offer=FIRST20", color: "bg-red-600" },
+  { text: "🚚 Free Shipping on Orders Over ₹500! 🎉", link: "/products?offer=FREESHIP", color: "bg-green-600" },
+  { text: "⏰ Limited Time Offer! Shop Now! ⭐", link: "/products?offer=LIMITEDTIME", color: "bg-blue-600" },
 ];
 
 const OfferBanner = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const ANIMATION_MS = 12000; // slower = smoother (12s per line)
+  const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
 
+  // Auto-scroll through offers
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % offers.length);
-    }, ANIMATION_MS);
-    return () => clearInterval(timer);
-  }, [ANIMATION_MS]);
+    const interval = setInterval(() => {
+      setCurrentOfferIndex((prevIndex) => (prevIndex + 1) % offers.length);
+    }, 5000); // Change offer every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentOffer = offers[currentOfferIndex];
 
   return (
-    <>
-      <div className="w-full bg-green-100 overflow-hidden relative z-40 border-b border-green-200 h-14">
-        <div
-          key={currentIndex}
-          className="marquee-item text-green-900 font-semibold text-lg"
+    // Make the banner fixed at the top, just below the Navbar
+    <div className="w-full bg-transparent overflow-hidden relative z-40">
+      <div
+        className={`relative ${currentOffer.color} text-white py-2 text-sm animate-marquee-text`}
+        // Ensure consistent height, add min-w-full to allow content to extend for marquee
+        style={{ height: '40px', minWidth: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        {/* Remove navigation buttons as it's now a continuous scroll */}
+        <Link
+          to={currentOffer.link}
+          className="block text-center font-medium px-4 py-1"
         >
-          <Link to={offers[currentIndex].link} className="inline-block px-4">
-            {offers[currentIndex].text}
-          </Link>
-        </div>
+          {currentOffer.text}
+        </Link>
       </div>
-
-      <style>{`
-        .marquee-item {
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          white-space: nowrap;
-          animation: slide ${ANIMATION_MS / 600}s linear forwards;
-        }
-
-        @keyframes slide {
-          0%   { left: 100%; transform: translateY(-50%); }    /* start outside right */
-          100% { left: -100%; transform: translateY(-50%); }   /* move fully out left */
-        }
-      `}</style>
-    </>
+    </div>
   );
 };
 

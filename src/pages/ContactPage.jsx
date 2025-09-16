@@ -3,6 +3,7 @@ import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import { Instagram, Facebook, Twitter, Youtube } from "lucide-react";
 
 const ContactPage = () => {
