@@ -1,26 +1,43 @@
-import React from "react";
+import logo from '../../assets/logo.png';
 import { Link } from "react-router-dom";
 import { MapPin, Mail, Instagram, Facebook, Youtube, Linkedin, Twitter } from "lucide-react";
+import React from 'react';
 
 const Footer = () => (
-  <footer className="bg-[#01796f] text-white py-12">
+  <footer className="bg-[#234F1E] text-white py-12">
     <div className="container mx-auto px-4 flex flex-col md:flex-row items-center md:items-start justify-between">
       <div className="mb-8 md:mb-0 text-center md:text-left">
-        <img src="/images/yuma-logo.png" alt="Yuma's Fresh Foods Logo" className="w-32 mb-4 mx-auto md:mx-0" />
-        <div className="flex items-center justify-center md:justify-start mb-2">
-          <MapPin className="w-4 h-4 mr-2" />
-          <p className="text-sm">123 Street Address, Oil Nagar, Sample City - 123456 Tamil Nadu, India</p>
+        <img
+          src={logo}
+          alt="Yuma's Fresh Foods Logo"
+          className="w-32 mb-4 mx-auto md:mx-0"
+        />
+
+        <div className="flex items-start justify-center md:justify-start mb-2">
+          <MapPin className="w-4 h-4 mr-2 mt-1" />
+          <div className="text-sm text-left">
+            <p>123 Street Address, Oil Nagar,</p>
+            <p>Sample City - 123456, Tamil Nadu, India</p>
+          </div>
         </div>
+
         <div className="flex items-center justify-center md:justify-start mb-2">
           <Mail className="w-4 h-4 mr-2" />
           <p className="text-sm">info@gmail.com</p>
         </div>
+
         <button className="bg-orange-500 text-white px-4 py-2 mt-4 rounded-lg flex items-center justify-center hover:bg-green-600 transition-colors">
-          <a href="https://wa.me/91XXXXXXXXXX" target="_blank" rel="noopener noreferrer">Click here to chat on Whatsapp</a>
+          <a
+            href="https://wa.me/91XXXXXXXXXX"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Click here to chat on Whatsapp
+          </a>
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row justify-between text-center md:text-left">
+      <div className="flex-1 flex flex-col md:flex-row justify-around text-center md:text-left">
         <div className="mb-6 md:mb-0">
           <h4 className="font-bold text-lg mb-4">Quick Links</h4>
           <ul className="space-y-2 text-sm">

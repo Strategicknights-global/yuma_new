@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
+// src/App.jsx
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -15,15 +16,16 @@ import ProfilePage from './pages/ProfilePage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import Orders from './pages/Orders';          // ✅ Import Orders page
 import Wishlist from './pages/Wishlist.jsx';
-import BulkEnquiry from './pages/BulkEnquiry.jsx'; // ✅ Import Bulk Enquiry Page
+import BulkEnquiry from './pages/BulkEnquiry.jsx';
 
 // Import common components
 import OfferBanner from './components/OfferBanner';
-import Footer from './components/Footer'; // Ensure Footer is imported
-import { db } from '../firebase.js'; // Import db from firebase
-import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
-import { FaWhatsapp } from 'react-icons/fa'; // ✅ WhatsApp Icon
+import Footer from './components/Footer';
+import { db } from '../firebase.js';
+import { doc, getDoc } from 'firebase/firestore';
+import { FaWhatsapp } from 'react-icons/fa';
 
 function App() {
   const [siteConfig, setSiteConfig] = useState(null);
@@ -49,7 +51,6 @@ function App() {
   }, []);
 
   if (loadingConfig) {
-    // You can render a loading spinner or a blank page while config loads
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
@@ -75,6 +76,7 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/order-success/:orderId" element={<OrderSuccessPage />} />
+                <Route path="/orders" element={<Orders orders={[]} loading={false} />} /> {/* ✅ Add Orders route */}
                 <Route path="/orders/:orderId" element={<OrderDetailPage />} />
                 <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/bulk-enquiry" element={<BulkEnquiry />} /> 
@@ -84,7 +86,7 @@ function App() {
             {/* Footer */}
             <Footer siteConfig={siteConfig?.footerInfo || {}} />
 
-            {/* ✅ Floating WhatsApp Button (edit number as needed) */}
+            {/* ✅ Floating WhatsApp Button */}
             <a
               href="https://wa.me/9876543210"
               target="_blank"

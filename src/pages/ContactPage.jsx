@@ -3,7 +3,6 @@ import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 import { Instagram, Facebook, Twitter, Youtube } from "lucide-react";
 
 const ContactPage = () => {
@@ -173,7 +172,7 @@ const ContactPage = () => {
             </form>
           </div>
 
-          {/* Contact Info + Social Links */}
+          {/* Contact Info */}
           <div className="space-y-8">
             <div className="bg-orange-100 p-8 rounded-lg shadow-lg">
               <h3 className="text-xl font-bold text-orange-900 mb-4">
@@ -193,7 +192,6 @@ const ContactPage = () => {
                 {siteConfig?.footerInfo?.phone || "+91 98765 43210"}
               </p>
             </div>
-
             <div className="bg-orange-100 p-8 rounded-lg shadow-lg">
               <h3 className="text-xl font-bold text-orange-900 mb-4">
                 Follow Us
@@ -235,25 +233,7 @@ const ContactPage = () => {
             </div>
           </div>
         </div>
-
-        {/* Google Map Full Width Below */}
-        <div className=" bg-orange-100 mt-12 w-full h-96 rounded-lg overflow-hidden shadow-lg">
-          <h3 className="text-xl font-bold text-orange-900 mb-4">
-                Our Location
-              </h3>
-          <iframe
-            title="Google Map Location"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3918.526012313862!2d76.9596831!3d10.991028!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba85974b604d59b%3A0xd6de4fe0860fcced!2s451%2C%20D%20M%20Kovil%20St%2C%20Ukkadam%2C%20Coimbatore%2C%20Tamil%20Nadu%20641001!5e0!3m2!1sen!2sin!4v1694364800000!5m2!1sen!2sin"
-            width="100%"
-            height="100%"
-            style={{ border: 0 }}
-            allowFullScreen=""
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          ></iframe>
-        </div>
       </div>
-
 
     </div>
   );

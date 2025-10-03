@@ -3,24 +3,22 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { Plus, Minus, Trash2, ChevronRight, ShoppingBag } from "lucide-react";
+import Navbar from "../components/Navbar";  // ✅ Import Navbar
 
 const CartPage = () => {
   const { cart, updateQuantity, removeFromCart, totalCartValue, loadingCart } =
     useCart();
-  const { user, isLoggedIn } = useAuth(); // ✅ updated
+  const { user, isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
   const handleCheckout = () => {
     if (!isLoggedIn || !user?.uid) {
-      // Redirect to login but save the intention to checkout
       navigate("/login?redirect=/checkout");
     } else {
-      // Proceed to checkout page
       navigate("/checkout");
     }
   };
 
-  // Show a loading spinner while the cart is being fetched from Firestore
   if (loadingCart) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -31,6 +29,9 @@ const CartPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* ✅ Navbar always on top */}
+      <Navbar />
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumbs */}
         <div className="flex items-center text-sm text-gray-600 mb-6">
@@ -52,7 +53,7 @@ const CartPage = () => {
                   <li key={item.cartKey} className="flex p-4 sm:p-6">
                     <div className="flex-shrink-0">
                       <img
-                        src={item.images[0]}
+                        src={item.image}
                         alt={item.name}
                         className="w-24 h-24 rounded-md object-cover sm:w-32 sm:h-32"
                       />

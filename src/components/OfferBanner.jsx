@@ -1,43 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom'; // Import Link for internal navigation
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 const offers = [
-  { text: "⚡ 20% OFF Your First Order! Use Code FIRST20", link: "/products?offer=FIRST20", color: "bg-red-600" },
-  { text: "🚚 Free Shipping on Orders Over ₹500! 🎉", link: "/products?offer=FREESHIP", color: "bg-green-600" },
-  { text: "⏰ Limited Time Offer! Shop Now! ⭐", link: "/products?offer=LIMITEDTIME", color: "bg-blue-600" },
+  { text: "⚡ 20% OFF Your First Order! Use Code FIRST20", link: "/products?offer=FIRST20" },
+  { text: "🚚 Free Shipping on Orders Over ₹500! 🎉", link: "/products?offer=FREESHIP" },
+  { text: "⏰ Limited Time Offer! Shop Now! ⭐", link: "/products?offer=LIMITEDTIME" },
 ];
 
 const OfferBanner = () => {
-  const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
-
-  // Auto-scroll through offers
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const ANIMATION_MS = 12000; // 12s per line
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentOfferIndex((prevIndex) => (prevIndex + 1) % offers.length);
-    }, 5000); // Change offer every 5 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  const currentOffer = offers[currentOfferIndex];
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % offers.length);
+    }, ANIMATION_MS);
+    return () => clearInterval(timer);
+  }, [ANIMATION_MS]);
 
   return (
-    // Make the banner fixed at the top, just below the Navbar
-    <div className="w-full bg-transparent overflow-hidden relative z-40">
-      <div
-        className={`relative ${currentOffer.color} text-white py-2 text-sm animate-marquee-text`}
-        // Ensure consistent height, add min-w-full to allow content to extend for marquee
-        style={{ height: '40px', minWidth: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        {/* Remove navigation buttons as it's now a continuous scroll */}
-        <Link
-          to={currentOffer.link}
-          className="block text-center font-medium px-4 py-1"
+    <>
+      {/* fixed at top; h-14 => 56px height */}
+      <div className="w-full bg-green-100 overflow-hidden fixed top-0 left-0 z-50 border-b border-green-200 h-14">
+        <div
+          key={currentIndex}
+          className="marquee-item text-green-900 font-semibold text-lg"
         >
-          {currentOffer.text}
-        </Link>
+          <Link to={offers[currentIndex].link} className="inline-block px-4">
+            {offers[currentIndex].text}
+          </Link>
+        </div>
       </div>
-    </div>
+
+      <style>{`
+        .marquee-item {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          white-space: nowrap;
+          animation: slide ${ANIMATION_MS / 600}s linear forwards;
+        }
+        @keyframes slide {
+          0%   { left: 100%; transform: translateY(-50%); }
+          100% { left: -100%; transform: translateY(-50%); }
+        }
+      `}</style>
+    </>
   );
 };
 
