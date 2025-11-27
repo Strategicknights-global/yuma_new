@@ -4,19 +4,17 @@ import {
   collection,
   doc,
   runTransaction,
-  query,
-  where,
-  getDocs,
   serverTimestamp,
-  limit,
 } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { ChevronRight } from "lucide-react";
 
+const PRODUCT_COLLECTION_NAME = "products";
+
 const CheckoutPage = () => {
-  const { user, isLoggedIn } = useAuth(); // ✅ updated
+  const { user, isLoggedIn } = useAuth();
   const { cart, totalCartValue, clearCart, loadingCart } = useCart();
   const navigate = useNavigate();
 
@@ -30,6 +28,16 @@ const CheckoutPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState({ show: false, message: "", type: "" });
+
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ show: false, message: "", type: "" });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
 
   useEffect(() => {
     if (!loadingCart) {
@@ -41,6 +49,18 @@ const CheckoutPage = () => {
     }
   }, [isLoggedIn, user, cart, loadingCart, navigate]);
 
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setShippingDetails((prev) => ({ ...prev, [name]: value }));
@@ -50,7 +70,7 @@ const CheckoutPage = () => {
     e.preventDefault();
     setError("");
 
-    // Ensure shipping details are filled
+    // Validate shipping details
     for (const key in shippingDetails) {
       if (!shippingDetails[key]) {
         setError("Please fill in all shipping details.");
@@ -59,83 +79,117 @@ const CheckoutPage = () => {
     }
 
     setLoading(true);
-    const newOrderRef = doc(collection(db, "orders"));
 
     try {
-      await runTransaction(db, async (transaction) => {
-        const inventoryDocs = new Map();
-        const inventoryRefs = new Map();
+      // Step 1: Verify stock
+      const newOrderRef = doc(collection(db, "orders"));
+      const orderId = newOrderRef.id.substring(0, 8).toUpperCase();
 
+      await runTransaction(db, async (transaction) => {
+        // --- START: Stock Check Logic using products.inStock ---
         for (const item of cart) {
+          const productId = item.productId || item.id;
           const productName =
             item.displayName ||
             (item.variant ? `${item.name} (${item.variant.size})` : item.name);
+          
+          if (!productId) {
+             throw new Error(`Cannot verify stock for item: ${productName}. Missing product ID.`);
+          }
 
-          const inventoryQuery = query(
-            collection(db, "inventory_items"),
-            where("productName", "==", productName),
-            limit(1)
-          );
+          const productDocRef = doc(db, PRODUCT_COLLECTION_NAME, productId);
+          const productDoc = await transaction.get(productDocRef);
 
-          const inventorySnapshot = await getDocs(inventoryQuery);
-          if (inventorySnapshot.empty) {
+          if (!productDoc.exists()) {
+            throw new Error(
+              `Product "${productName}" not found. Cannot place order.`
+            );
+          }
+
+          const productData = productDoc.data();
+          
+          if (!productData.inStock) {
             throw new Error(
               `We're sorry, "${productName}" is currently out of stock.`
             );
           }
-
-          const inventoryDocRef = inventorySnapshot.docs[0].ref;
-          const inventoryDoc = await transaction.get(inventoryDocRef);
-
-          inventoryRefs.set(productName, inventoryDocRef);
-          inventoryDocs.set(productName, inventoryDoc);
         }
-
-        // Check stock
-        for (const item of cart) {
-          const productName =
-            item.displayName ||
-            (item.variant ? `${item.name} (${item.variant.size})` : item.name);
-          const inventoryDoc = inventoryDocs.get(productName);
-
-          if (!inventoryDoc.exists()) {
-            throw new Error(
-              `Inventory data for "${productName}" could not be read.`
-            );
-          }
-
-          const currentStock = inventoryDoc.data().currentStock;
-          if (currentStock < item.quantity) {
-            throw new Error(
-              `Not enough stock for "${productName}". Only ${currentStock} available.`
-            );
-          }
-        }
-
-        const orderId = newOrderRef.id.substring(0, 8).toUpperCase();
-
-        transaction.set(newOrderRef, {
-          userId: user.uid,
-          userEmail: user.email,
-          items: cart,
-          totalAmount: totalCartValue,
-          shippingDetails,
-          status: "Pending",
-          createdAt: serverTimestamp(),
-          orderId,
-        });
-
-        // Inventory updates will be handled by backend/Cloud Functions
+        // --- END: Stock Check Logic ---
       });
 
-      await clearCart();
-      navigate(`/order-success/${newOrderRef.id}`);
+      // Step 2: Initiate Razorpay payment
+      const amountInPaise = Math.round(totalCartValue * 100);
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: amountInPaise,
+        currency: "INR",
+        name: "Your Store Name",
+        description: `Order #${orderId}`,
+        prefill: {
+          name: shippingDetails.name,
+          email: user.email,
+          contact: shippingDetails.phone,
+        },
+        handler: async (response) => {
+          try {
+            // Payment successful - save order to Firebase
+            await runTransaction(db, async (transaction) => {
+              transaction.set(newOrderRef, {
+                userId: user.uid,
+                userEmail: user.email,
+                items: cart,
+                totalAmount: totalCartValue,
+                shippingDetails,
+                status: "Confirmed",
+                paymentStatus: "Paid",
+                razorpayPaymentId: response.razorpay_payment_id,
+                createdAt: serverTimestamp(),
+                orderId,
+              });
+            });
+
+            await clearCart();
+            setLoading(false);
+
+            // Show success toast
+            setToast({ show: true, message: "Order placed successfully!", type: "success" });
+            
+            // Redirect to products page after toast disappears
+            setTimeout(() => {
+              navigate("/products", { state: { orderSuccess: true } });
+            }, 3000);
+          } catch (err) {
+            console.error("Order creation error:", err);
+            setToast({ show: true, message: "Failed to create order. Please contact support.", type: "error" });
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setError("Payment cancelled. Please try again.");
+            setLoading(false);
+          },
+        },
+        theme: {
+          color: "#DC2626",
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
     } catch (err) {
-      console.error("Transaction failed: ", err);
-      setError(
-        err.message ||
-          "Failed to place order. Please check stock and try again."
-      );
+      console.error("Order preparation error:", err);
+      let errorMessage = "Failed to place order. Please check stock and try again.";
+      if (
+        err.message &&
+        (err.message.includes("stock") ||
+          err.message.includes("product") ||
+          err.message.includes("ID"))
+      ) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -150,6 +204,59 @@ const CheckoutPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <style>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-2xl text-white font-medium flex items-center gap-3 z-50 ${
+            toast.type === "success" ? "bg-green-500" : "bg-red-500"
+          }`}
+          style={{
+            animation: "slideInUp 0.3s ease-out"
+          }}
+        >
+          {toast.type === "success" && (
+            <svg
+              className="w-5 h-5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+          {toast.type === "error" && (
+            <svg
+              className="w-5 h-5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+          {toast.message}
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumbs */}
         <div className="flex items-center text-sm text-gray-600 mb-6">
@@ -291,3 +398,5 @@ const CheckoutPage = () => {
 };
 
 export default CheckoutPage;
+
+
